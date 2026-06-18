@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/jaxson/FluxCore/server/api"
 	"github.com/jaxson/FluxCore/server/config"
 	"github.com/jaxson/FluxCore/server/db"
 	"github.com/jaxson/FluxCore/server/service"
 )
+
+const databasePingTimeout = 5 * time.Second
 
 func main() {
 	cfg, err := config.Load()
@@ -28,7 +31,9 @@ func main() {
 		}
 	}()
 
-	if err := db.Ping(context.Background(), conn); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), databasePingTimeout)
+	defer cancel()
+	if err := db.Ping(ctx, conn); err != nil {
 		log.Fatalf("ping database: %v", err)
 	}
 	if err := service.Migrate(conn); err != nil {

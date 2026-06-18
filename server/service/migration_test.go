@@ -35,7 +35,7 @@ func TestMigrateSupportsProjectRepositoryAssociation(t *testing.T) {
 	project := model.Project{
 		Name:        "fluxcore",
 		Description: "local-first dev console",
-		Status:      "active",
+		Status:      model.ProjectStatusActive,
 		Repositories: []model.Repository{
 			{
 				Name:          "FluxCore",
