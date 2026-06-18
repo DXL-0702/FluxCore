@@ -1,13 +1,21 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/jaxson/FluxCore/server/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+)
+
+const (
+	defaultMaxIdleConns    = 5
+	defaultMaxOpenConns    = 25
+	defaultConnMaxLifetime = time.Hour
 )
 
 func Open(cfg config.DatabaseConfig) (*gorm.DB, error) {
@@ -23,10 +31,17 @@ func Open(cfg config.DatabaseConfig) (*gorm.DB, error) {
 		return nil, fmt.Errorf("open %s database: %w", cfg.Type, err)
 	}
 
+	if err := configurePool(conn); err != nil {
+		return nil, err
+	}
+
 	return conn, nil
 }
 
-func Ping(conn *gorm.DB) error {
+func Ping(ctx context.Context, conn *gorm.DB) error {
+	if ctx == nil {
+		return fmt.Errorf("context is nil")
+	}
 	if conn == nil {
 		return fmt.Errorf("database connection is nil")
 	}
@@ -36,7 +51,7 @@ func Ping(conn *gorm.DB) error {
 		return fmt.Errorf("get database handle: %w", err)
 	}
 
-	if err := sqlDB.Ping(); err != nil {
+	if err := sqlDB.PingContext(ctx); err != nil {
 		return fmt.Errorf("ping database: %w", err)
 	}
 
@@ -56,6 +71,19 @@ func Close(conn *gorm.DB) error {
 	if err := sqlDB.Close(); err != nil {
 		return fmt.Errorf("close database: %w", err)
 	}
+
+	return nil
+}
+
+func configurePool(conn *gorm.DB) error {
+	sqlDB, err := conn.DB()
+	if err != nil {
+		return fmt.Errorf("get database handle for pool config: %w", err)
+	}
+
+	sqlDB.SetMaxIdleConns(defaultMaxIdleConns)
+	sqlDB.SetMaxOpenConns(defaultMaxOpenConns)
+	sqlDB.SetConnMaxLifetime(defaultConnMaxLifetime)
 
 	return nil
 }

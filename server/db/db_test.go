@@ -1,8 +1,10 @@
 package db
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jaxson/FluxCore/server/config"
@@ -24,7 +26,7 @@ func TestOpenSQLiteAndPing(t *testing.T) {
 		}
 	})
 
-	if err := Ping(conn); err != nil {
+	if err := Ping(context.Background(), conn); err != nil {
 		t.Fatalf("Ping() error = %v", err)
 	}
 
@@ -40,6 +42,9 @@ func TestOpenRejectsEmptySQLitePath(t *testing.T) {
 	if err == nil {
 		t.Fatal("Open() error = nil, want error")
 	}
+	if !strings.Contains(err.Error(), "SQLite path must not be empty") {
+		t.Fatalf("Open() error = %q, want message containing %q", err.Error(), "SQLite path must not be empty")
+	}
 }
 
 func TestOpenRejectsEmptyPostgresDSN(t *testing.T) {
@@ -48,6 +53,9 @@ func TestOpenRejectsEmptyPostgresDSN(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("Open() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "PostgreSQL DSN must not be empty") {
+		t.Fatalf("Open() error = %q, want message containing %q", err.Error(), "PostgreSQL DSN must not be empty")
 	}
 }
 
@@ -73,10 +81,19 @@ func TestOpenRejectsUnsupportedDBType(t *testing.T) {
 	if err == nil {
 		t.Fatal("Open() error = nil, want error")
 	}
+	if !strings.Contains(err.Error(), "unsupported database type") {
+		t.Fatalf("Open() error = %q, want message containing %q", err.Error(), "unsupported database type")
+	}
 }
 
 func TestPingRejectsNilConnection(t *testing.T) {
-	if err := Ping(nil); err == nil {
+	if err := Ping(context.Background(), nil); err == nil {
+		t.Fatal("Ping() error = nil, want error")
+	}
+}
+
+func TestPingRejectsNilContext(t *testing.T) {
+	if err := Ping(nil, nil); err == nil {
 		t.Fatal("Ping() error = nil, want error")
 	}
 }
