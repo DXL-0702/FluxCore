@@ -67,6 +67,92 @@ func TestMigrateSupportsProjectRepositoryAssociation(t *testing.T) {
 	}
 }
 
+func TestMigrateEnforcesRepositoryProjectScopedUniqueness(t *testing.T) {
+	conn := openTestDB(t)
+
+	if err := Migrate(conn); err != nil {
+		t.Fatalf("Migrate() error = %v", err)
+	}
+
+	projectA := model.Project{Name: "project-a", Status: model.ProjectStatusActive}
+	projectB := model.Project{Name: "project-b", Status: model.ProjectStatusActive}
+	if err := conn.Create(&projectA).Error; err != nil {
+		t.Fatalf("Create(projectA) error = %v", err)
+	}
+	if err := conn.Create(&projectB).Error; err != nil {
+		t.Fatalf("Create(projectB) error = %v", err)
+	}
+
+	repository := model.Repository{
+		ProjectID:     projectA.ID,
+		Name:          "backend",
+		LocalPath:     "/tmp/project-a/backend",
+		RemoteURL:     "git@example.com:team/backend.git",
+		DefaultBranch: "main",
+	}
+	if err := conn.Create(&repository).Error; err != nil {
+		t.Fatalf("Create(repository) error = %v", err)
+	}
+
+	sameIdentityDifferentProject := model.Repository{
+		ProjectID:     projectB.ID,
+		Name:          "backend",
+		LocalPath:     "/tmp/project-b/backend",
+		RemoteURL:     "git@example.com:team/backend.git",
+		DefaultBranch: "main",
+	}
+	if err := conn.Create(&sameIdentityDifferentProject).Error; err != nil {
+		t.Fatalf("Create(sameIdentityDifferentProject) error = %v", err)
+	}
+
+	duplicateRemoteInProject := model.Repository{
+		ProjectID:     projectA.ID,
+		Name:          "backend-copy",
+		LocalPath:     "/tmp/project-a/backend-copy",
+		RemoteURL:     "git@example.com:team/backend.git",
+		DefaultBranch: "main",
+	}
+	if err := conn.Create(&duplicateRemoteInProject).Error; err == nil {
+		t.Fatal("Create(duplicateRemoteInProject) error = nil, want unique constraint error")
+	}
+
+	duplicateNameInProject := model.Repository{
+		ProjectID:     projectA.ID,
+		Name:          "backend",
+		LocalPath:     "/tmp/project-a/backend-alt",
+		RemoteURL:     "git@example.com:team/backend-alt.git",
+		DefaultBranch: "main",
+	}
+	if err := conn.Create(&duplicateNameInProject).Error; err == nil {
+		t.Fatal("Create(duplicateNameInProject) error = nil, want unique constraint error")
+	}
+}
+
+func TestMigrateStoresLongConfigValue(t *testing.T) {
+	conn := openTestDB(t)
+
+	if err := Migrate(conn); err != nil {
+		t.Fatalf("Migrate() error = %v", err)
+	}
+
+	value := strings.Repeat("x", 4096)
+	configItem := model.Config{
+		Key:   "runner.large_payload",
+		Value: value,
+	}
+	if err := conn.Create(&configItem).Error; err != nil {
+		t.Fatalf("Create(Config) error = %v", err)
+	}
+
+	var loaded model.Config
+	if err := conn.First(&loaded, "key = ?", "runner.large_payload").Error; err != nil {
+		t.Fatalf("First(Config) error = %v", err)
+	}
+	if loaded.Value != value {
+		t.Fatalf("Config.Value length = %d, want %d", len(loaded.Value), len(value))
+	}
+}
+
 func TestMigrateRejectsNilConnection(t *testing.T) {
 	err := Migrate(nil)
 	if err == nil {

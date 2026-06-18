@@ -4,7 +4,7 @@ import "time"
 
 type Repository struct {
 	ID            uint      `gorm:"primaryKey" json:"id"`
-	ProjectID     uint      `gorm:"not null;uniqueIndex:idx_project_repository_remote;uniqueIndex:idx_project_repository_name" json:"project_id"`
+	ProjectID     uint      `gorm:"not null;uniqueIndex:idx_project_repository_remote;index:idx_project_repository_name,unique" json:"project_id"`
 	Project       Project   `json:"-"`
 	Name          string    `gorm:"not null;size:120;uniqueIndex:idx_project_repository_name" json:"name"`
 	LocalPath     string    `gorm:"not null;uniqueIndex;size:500" json:"local_path"`
