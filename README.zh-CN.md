@@ -141,8 +141,7 @@ cd FluxCore
 
 # 启动后端
 cd server
-cp .env.example .env
-go run main.go
+API_TOKEN=local-dev-token go run .
 
 # 启动前端（新终端窗口）
 cd web
