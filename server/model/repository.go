@@ -4,9 +4,9 @@ import "time"
 
 type Repository struct {
 	ID            uint      `gorm:"primaryKey" json:"id"`
-	ProjectID     uint      `gorm:"not null;uniqueIndex:idx_project_repository_remote" json:"project_id"`
+	ProjectID     uint      `gorm:"not null;uniqueIndex:idx_project_repository_remote;uniqueIndex:idx_project_repository_name" json:"project_id"`
 	Project       Project   `json:"-"`
-	Name          string    `gorm:"not null;size:120" json:"name"`
+	Name          string    `gorm:"not null;size:120;uniqueIndex:idx_project_repository_name" json:"name"`
 	LocalPath     string    `gorm:"not null;uniqueIndex;size:500" json:"local_path"`
 	RemoteURL     string    `gorm:"not null;size:500;uniqueIndex:idx_project_repository_remote" json:"remote_url"`
 	DefaultBranch string    `gorm:"not null;size:120;default:main" json:"default_branch"`
