@@ -8,7 +8,9 @@ import (
 
 const (
 	DefaultPort       = "8080"
-	DefaultDBType     = "sqlite"
+	DBTypeSQLite      = "sqlite"
+	DBTypePostgres    = "postgres"
+	DefaultDBType     = DBTypeSQLite
 	DefaultSQLitePath = "fluxcore.db"
 )
 
@@ -65,13 +67,13 @@ func LoadFromLookup(lookup LookupEnv) (Config, error) {
 	}
 
 	switch dbType {
-	case "sqlite":
+	case DBTypeSQLite:
 		sqlitePath, err := envOrDefault(lookup, "SQLITE_PATH", DefaultSQLitePath)
 		if err != nil {
 			return Config{}, err
 		}
 		database.SQLitePath = sqlitePath
-	case "postgres":
+	case DBTypePostgres:
 		postgresDSN, err := requiredEnv(lookup, "POSTGRES_DSN")
 		if err != nil {
 			return Config{}, err
