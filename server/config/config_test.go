@@ -74,6 +74,18 @@ func TestLoadFromLookupPostgres(t *testing.T) {
 	}
 }
 
+func TestOptionalEnvWhitespaceIsAbsent(t *testing.T) {
+	value, ok := optionalEnv(mapLookup(map[string]string{
+		"API_TOKEN": "   ",
+	}), "API_TOKEN")
+	if ok {
+		t.Fatal("optionalEnv() ok = true, want false")
+	}
+	if value != "" {
+		t.Fatalf("optionalEnv() value = %q, want empty", value)
+	}
+}
+
 func mapLookup(values map[string]string) LookupEnv {
 	return func(key string) (string, bool) {
 		value, ok := values[key]

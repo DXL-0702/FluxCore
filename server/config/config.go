@@ -142,5 +142,10 @@ func optionalEnv(lookup LookupEnv, key string) (string, bool) {
 		return "", false
 	}
 
-	return strings.TrimSpace(value), true
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", false
+	}
+
+	return value, true
 }
