@@ -1,6 +1,10 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
 
 func NewRouter() *gin.Engine {
 	router := gin.New()
@@ -15,8 +19,8 @@ func NewRouter() *gin.Engine {
 }
 
 func registerRoutes(router *gin.Engine) {
-	router.GET("/", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
+	router.GET("/health", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{
 			"service": "fluxcore-server",
 			"status":  "ok",
 		})
