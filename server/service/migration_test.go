@@ -18,9 +18,14 @@ func TestMigrateCreatesPhaseOneTables(t *testing.T) {
 		t.Fatalf("Migrate() error = %v", err)
 	}
 
-	for _, table := range []string{"projects", "repositories", "users", "configs"} {
+	for _, table := range []interface{}{
+		&model.Project{},
+		&model.Repository{},
+		&model.User{},
+		&model.Config{},
+	} {
 		if !conn.Migrator().HasTable(table) {
-			t.Fatalf("expected table %q to exist", table)
+			t.Fatalf("expected table for %T to exist", table)
 		}
 	}
 }
