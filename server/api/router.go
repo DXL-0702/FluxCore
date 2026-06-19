@@ -10,6 +10,7 @@ import (
 func NewRouter(cfg config.Config) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(requireAPIToken(cfg.Security.APIToken))
 	if err := router.SetTrustedProxies(nil); err != nil {
 		panic(err)
 	}

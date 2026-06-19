@@ -142,8 +142,7 @@ cd FluxCore
 
 # Start the backend
 cd server
-cp .env.example .env
-go run main.go
+API_TOKEN=local-dev-token go run .
 
 # Start the frontend (in a new terminal)
 cd web
