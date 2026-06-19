@@ -156,7 +156,7 @@ func (client *Client) CreateOrGetRepository(ctx context.Context, projectID uint,
 		return Repository{}, err
 	}
 	for _, item := range repositories {
-		if item.LocalPath == input.LocalPath {
+		if item.RemoteURL == input.RemoteURL {
 			return item, nil
 		}
 	}

@@ -91,16 +91,25 @@ func (inspector Inspector) RepositoryRoot(ctx context.Context) (string, error) {
 }
 
 func (inspector Inspector) RemoteURL(ctx context.Context, root string) (string, error) {
-	remoteURL, err := inspector.run(ctx, root, "config", "--get", "remote.origin.url")
-	if err != nil {
-		return "", ErrRemoteMissing
+	if remoteURL, err := inspector.remoteURLForName(ctx, root, "origin"); err == nil {
+		return remoteURL, nil
 	}
 
-	remoteURL = strings.TrimSpace(remoteURL)
-	if remoteURL == "" {
-		return "", ErrRemoteMissing
+	remoteNames, err := inspector.remoteNames(ctx, root)
+	if err != nil {
+		return "", err
 	}
-	return remoteURL, nil
+	for _, name := range remoteNames {
+		if name == "origin" {
+			continue
+		}
+		remoteURL, err := inspector.remoteURLForName(ctx, root, name)
+		if err == nil {
+			return remoteURL, nil
+		}
+	}
+
+	return "", ErrRemoteMissing
 }
 
 func (inspector Inspector) CurrentBranch(ctx context.Context, root string) (string, error) {
@@ -147,4 +156,36 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	}
 
 	return stdout.String(), nil
+}
+
+func (inspector Inspector) remoteURLForName(ctx context.Context, root string, name string) (string, error) {
+	remoteURL, err := inspector.run(ctx, root, "config", "--get", "remote."+name+".url")
+	if err != nil {
+		return "", ErrRemoteMissing
+	}
+
+	remoteURL = strings.TrimSpace(remoteURL)
+	if remoteURL == "" {
+		return "", ErrRemoteMissing
+	}
+	return remoteURL, nil
+}
+
+func (inspector Inspector) remoteNames(ctx context.Context, root string) ([]string, error) {
+	rawRemotes, err := inspector.run(ctx, root, "remote")
+	if err != nil {
+		return nil, ErrRemoteMissing
+	}
+
+	names := make([]string, 0)
+	for _, line := range strings.Split(rawRemotes, "\n") {
+		name := strings.TrimSpace(line)
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return nil, ErrRemoteMissing
+	}
+	return names, nil
 }

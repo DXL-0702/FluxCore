@@ -87,7 +87,7 @@ func TestCreateOrGetProjectUsesListOnConflict(t *testing.T) {
 	}
 }
 
-func TestCreateOrGetRepositoryOnlyReusesSameLocalPath(t *testing.T) {
+func TestCreateOrGetRepositoryReusesSameRemoteURL(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
@@ -96,7 +96,7 @@ func TestCreateOrGetRepositoryOnlyReusesSameLocalPath(t *testing.T) {
 			writer.WriteHeader(http.StatusConflict)
 			_, _ = writer.Write([]byte(`{"error":{"code":"conflict","message":"repository conflicts"}}`))
 		case request.Method == http.MethodGet && request.URL.Path == "/api/projects/9/repositories":
-			_, _ = writer.Write([]byte(`{"repositories":[{"id":11,"project_id":9,"name":"FluxCore","local_path":"/repo","remote_url":"git@example.com:repo.git","default_branch":"main"}]}`))
+			_, _ = writer.Write([]byte(`{"repositories":[{"id":11,"project_id":9,"name":"FluxCore","local_path":"/old/repo","remote_url":"git@example.com:repo.git","default_branch":"main"}]}`))
 		default:
 			t.Fatalf("unexpected request %s %s", request.Method, request.URL.Path)
 		}
@@ -122,7 +122,7 @@ func TestCreateOrGetRepositoryOnlyReusesSameLocalPath(t *testing.T) {
 	}
 }
 
-func TestCreateOrGetRepositoryDoesNotReuseDifferentLocalPath(t *testing.T) {
+func TestCreateOrGetRepositoryDoesNotReuseDifferentRemoteURL(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
@@ -131,7 +131,7 @@ func TestCreateOrGetRepositoryDoesNotReuseDifferentLocalPath(t *testing.T) {
 			writer.WriteHeader(http.StatusConflict)
 			_, _ = writer.Write([]byte(`{"error":{"code":"conflict","message":"repository conflicts"}}`))
 		case request.Method == http.MethodGet && request.URL.Path == "/api/projects/9/repositories":
-			_, _ = writer.Write([]byte(`{"repositories":[{"id":11,"project_id":9,"name":"FluxCore","local_path":"/other","remote_url":"git@example.com:repo.git","default_branch":"main"}]}`))
+			_, _ = writer.Write([]byte(`{"repositories":[{"id":11,"project_id":9,"name":"FluxCore","local_path":"/repo","remote_url":"git@example.com:other.git","default_branch":"main"}]}`))
 		default:
 			t.Fatalf("unexpected request %s %s", request.Method, request.URL.Path)
 		}

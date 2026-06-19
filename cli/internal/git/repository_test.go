@@ -69,7 +69,41 @@ func TestRepositoryRootMapsGitFailureToNotRepository(t *testing.T) {
 	}
 }
 
-func TestRemoteURLRequiresOrigin(t *testing.T) {
+func TestRemoteURLFallsBackToFirstConfiguredRemote(t *testing.T) {
+	calls := make([][]string, 0)
+	runner := func(ctx context.Context, dir string, args ...string) (string, error) {
+		calls = append(calls, append([]string{dir}, args...))
+		switch strings.Join(args, " ") {
+		case "config --get remote.origin.url":
+			return "", errors.New("origin missing")
+		case "remote":
+			return "upstream\ngithub\n", nil
+		case "config --get remote.upstream.url":
+			return "git@example.com:upstream/repo.git\n", nil
+		default:
+			return "", errors.New("unexpected git command")
+		}
+	}
+
+	remoteURL, err := NewInspectorWithRunner("/repo", runner).RemoteURL(context.Background(), "/repo")
+	if err != nil {
+		t.Fatalf("RemoteURL() error = %v", err)
+	}
+	if remoteURL != "git@example.com:upstream/repo.git" {
+		t.Fatalf("RemoteURL() = %q", remoteURL)
+	}
+
+	expected := [][]string{
+		{"/repo", "config", "--get", "remote.origin.url"},
+		{"/repo", "remote"},
+		{"/repo", "config", "--get", "remote.upstream.url"},
+	}
+	if !reflect.DeepEqual(calls, expected) {
+		t.Fatalf("calls = %#v, want %#v", calls, expected)
+	}
+}
+
+func TestRemoteURLRequiresConfiguredRemote(t *testing.T) {
 	runner := func(ctx context.Context, dir string, args ...string) (string, error) {
 		return "", errors.New("missing remote")
 	}

@@ -100,8 +100,8 @@ func runLink(cmd *cobra.Command, rootOptions *rootOptions, options *linkOptions)
 	cfg.Repository = localconfig.Repository{
 		ID:            linkedRepository.ID,
 		Name:          linkedRepository.Name,
-		LocalPath:     linkedRepository.LocalPath,
-		RemoteURL:     linkedRepository.RemoteURL,
+		LocalPath:     repository.Root,
+		RemoteURL:     repository.RemoteURL,
 		DefaultBranch: linkedRepository.DefaultBranch,
 	}
 	if err := store.Save(cfg); err != nil {
