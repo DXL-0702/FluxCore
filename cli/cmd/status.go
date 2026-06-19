@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	localconfig "github.com/jaxson/FluxCore/cli/internal/config"
@@ -12,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newStatusCommand() *cobra.Command {
+func newStatusCommand(options *rootOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show FluxCore binding status for the current Git repository",
@@ -20,7 +19,7 @@ func newStatusCommand() *cobra.Command {
 			ctx, cancel := context.WithTimeout(cmd.Context(), commandTimeout)
 			defer cancel()
 
-			workingDir, err := os.Getwd()
+			workingDir, err := options.workingDir()
 			if err != nil {
 				return fmt.Errorf("read working directory: %w", err)
 			}

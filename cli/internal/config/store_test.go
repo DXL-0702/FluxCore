@@ -53,6 +53,14 @@ func TestStoreInitCreatesConfigAndGitignore(t *testing.T) {
 	if string(gitignore) != ".fluxcore/\n" {
 		t.Fatalf(".gitignore = %q", string(gitignore))
 	}
+
+	matches, err := filepath.Glob(filepath.Join(root, DirectoryName, "."+FileName+".*.tmp"))
+	if err != nil {
+		t.Fatalf("glob temporary config files: %v", err)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("temporary config files left behind: %v", matches)
+	}
 }
 
 func TestStoreInitIsIdempotentWithoutExplicitOverrides(t *testing.T) {

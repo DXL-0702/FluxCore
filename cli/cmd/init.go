@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	localconfig "github.com/jaxson/FluxCore/cli/internal/config"
@@ -21,7 +20,7 @@ func newInitCommand(options *rootOptions) *cobra.Command {
 			ctx, cancel := context.WithTimeout(cmd.Context(), commandTimeout)
 			defer cancel()
 
-			workingDir, err := os.Getwd()
+			workingDir, err := options.workingDir()
 			if err != nil {
 				return fmt.Errorf("read working directory: %w", err)
 			}

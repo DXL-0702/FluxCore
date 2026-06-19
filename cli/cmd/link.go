@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/jaxson/FluxCore/cli/internal/api"
@@ -44,7 +43,7 @@ func runLink(cmd *cobra.Command, rootOptions *rootOptions, options *linkOptions)
 	ctx, cancel := context.WithTimeout(cmd.Context(), commandTimeout)
 	defer cancel()
 
-	workingDir, err := os.Getwd()
+	workingDir, err := rootOptions.workingDir()
 	if err != nil {
 		return fmt.Errorf("read working directory: %w", err)
 	}

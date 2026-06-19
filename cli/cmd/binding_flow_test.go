@@ -18,60 +18,58 @@ func TestInitLinkStatusFlow(t *testing.T) {
 	server := newBindingTestServer(t, repositoryRoot)
 	defer server.Close()
 
-	withWorkingDir(t, repositoryRoot, func() {
-		output, err := executeForTest("init", "--server", server.URL, "--token", "secret-token")
-		if err != nil {
-			t.Fatalf("init error = %v\noutput:\n%s", err, output)
+	output, err := executeForTestInDir(repositoryRoot, "init", "--server", server.URL, "--token", "secret-token")
+	if err != nil {
+		t.Fatalf("init error = %v\noutput:\n%s", err, output)
+	}
+	for _, expected := range []string{
+		"Initialized FluxCore config",
+		"Token: configured",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("init output does not contain %q\noutput:\n%s", expected, output)
 		}
-		for _, expected := range []string{
-			"Initialized FluxCore config",
-			"Token: configured",
-		} {
-			if !strings.Contains(output, expected) {
-				t.Fatalf("init output does not contain %q\noutput:\n%s", expected, output)
-			}
-		}
-		if strings.Contains(output, "secret-token") {
-			t.Fatalf("init output leaked token\noutput:\n%s", output)
-		}
+	}
+	if strings.Contains(output, "secret-token") {
+		t.Fatalf("init output leaked token\noutput:\n%s", output)
+	}
 
-		output, err = executeForTest("link", "--project", "FluxCore")
-		if err != nil {
-			t.Fatalf("link error = %v\noutput:\n%s", err, output)
+	output, err = executeForTestInDir(repositoryRoot, "link", "--project", "FluxCore")
+	if err != nil {
+		t.Fatalf("link error = %v\noutput:\n%s", err, output)
+	}
+	for _, expected := range []string{
+		"Linked repository",
+		"Project ID: 7",
+		"Repository ID: 11",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("link output does not contain %q\noutput:\n%s", expected, output)
 		}
-		for _, expected := range []string{
-			"Linked repository",
-			"Project ID: 7",
-			"Repository ID: 11",
-		} {
-			if !strings.Contains(output, expected) {
-				t.Fatalf("link output does not contain %q\noutput:\n%s", expected, output)
-			}
-		}
-		if strings.Contains(output, "secret-token") {
-			t.Fatalf("link output leaked token\noutput:\n%s", output)
-		}
+	}
+	if strings.Contains(output, "secret-token") {
+		t.Fatalf("link output leaked token\noutput:\n%s", output)
+	}
 
-		output, err = executeForTest("status")
-		if err != nil {
-			t.Fatalf("status error = %v\noutput:\n%s", err, output)
+	output, err = executeForTestInDir(repositoryRoot, "status")
+	if err != nil {
+		t.Fatalf("status error = %v\noutput:\n%s", err, output)
+	}
+	for _, expected := range []string{
+		"FluxCore: linked",
+		"Server: " + server.URL,
+		"Project: FluxCore (7)",
+		"Bound repository: " + filepath.Base(repositoryRoot) + " (11)",
+		"Remote: git@example.com:DXL-0702/FluxCore.git",
+		"Token: configured",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("status output does not contain %q\noutput:\n%s", expected, output)
 		}
-		for _, expected := range []string{
-			"FluxCore: linked",
-			"Server: " + server.URL,
-			"Project: FluxCore (7)",
-			"Bound repository: " + filepath.Base(repositoryRoot) + " (11)",
-			"Remote: git@example.com:DXL-0702/FluxCore.git",
-			"Token: configured",
-		} {
-			if !strings.Contains(output, expected) {
-				t.Fatalf("status output does not contain %q\noutput:\n%s", expected, output)
-			}
-		}
-		if strings.Contains(output, "secret-token") {
-			t.Fatalf("status output leaked token\noutput:\n%s", output)
-		}
-	})
+	}
+	if strings.Contains(output, "secret-token") {
+		t.Fatalf("status output leaked token\noutput:\n%s", output)
+	}
 
 	cfg := readTestConfig(t, repositoryRoot)
 	if cfg.Project.ID != 7 || cfg.Project.Name != "FluxCore" {
@@ -91,48 +89,42 @@ func TestInitLinkStatusFlow(t *testing.T) {
 }
 
 func TestInitFailsOutsideGitRepository(t *testing.T) {
-	withWorkingDir(t, t.TempDir(), func() {
-		_, err := executeForTest("init")
-		if err == nil {
-			t.Fatal("init error = nil, want error")
-		}
-		if !strings.Contains(err.Error(), "current directory is not inside a git repository") {
-			t.Fatalf("error = %v", err)
-		}
-	})
+	_, err := executeForTestInDir(t.TempDir(), "init")
+	if err == nil {
+		t.Fatal("init error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "current directory is not inside a git repository") {
+		t.Fatalf("error = %v", err)
+	}
 }
 
 func TestStatusReportsUninitializedRepository(t *testing.T) {
 	repositoryRoot := newTestGitRepository(t)
 
-	withWorkingDir(t, repositoryRoot, func() {
-		output, err := executeForTest("status")
-		if err != nil {
-			t.Fatalf("status error = %v\noutput:\n%s", err, output)
+	output, err := executeForTestInDir(repositoryRoot, "status")
+	if err != nil {
+		t.Fatalf("status error = %v\noutput:\n%s", err, output)
+	}
+	for _, expected := range []string{
+		"FluxCore: not initialized",
+		"Next step: fluxcore init",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("status output does not contain %q\noutput:\n%s", expected, output)
 		}
-		for _, expected := range []string{
-			"FluxCore: not initialized",
-			"Next step: fluxcore init",
-		} {
-			if !strings.Contains(output, expected) {
-				t.Fatalf("status output does not contain %q\noutput:\n%s", expected, output)
-			}
-		}
-	})
+	}
 }
 
 func TestLinkRequiresInitializedConfig(t *testing.T) {
 	repositoryRoot := newTestGitRepository(t)
 
-	withWorkingDir(t, repositoryRoot, func() {
-		_, err := executeForTest("link", "--project", "FluxCore")
-		if err == nil {
-			t.Fatal("link error = nil, want error")
-		}
-		if !strings.Contains(err.Error(), "run fluxcore init first") {
-			t.Fatalf("error = %v", err)
-		}
-	})
+	_, err := executeForTestInDir(repositoryRoot, "link", "--project", "FluxCore")
+	if err == nil {
+		t.Fatal("link error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "run fluxcore init first") {
+		t.Fatalf("error = %v", err)
+	}
 }
 
 func newBindingTestServer(t *testing.T, repositoryRoot string) *httptest.Server {
@@ -218,25 +210,6 @@ func runTestGit(t *testing.T, dir string, args ...string) {
 	if err != nil {
 		t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
 	}
-}
-
-func withWorkingDir(t *testing.T, dir string, fn func()) {
-	t.Helper()
-
-	previous, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("get working dir: %v", err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	defer func() {
-		if err := os.Chdir(previous); err != nil {
-			t.Fatalf("restore working dir: %v", err)
-		}
-	}()
-
-	fn()
 }
 
 func readTestConfig(t *testing.T, root string) localconfig.Config {
