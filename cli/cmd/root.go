@@ -23,9 +23,11 @@ func newRootCommand() *cobra.Command {
 
 func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "fluxcore",
-		Short: "FluxCore local development context CLI",
-		Long:  "FluxCore connects local Git repositories to the FluxCore backend.",
+		Use:           "fluxcore",
+		Short:         "FluxCore local development context CLI",
+		Long:          "FluxCore connects local Git repositories to the FluxCore backend.",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -33,6 +35,12 @@ func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
 
 	rootCmd.PersistentFlags().StringVar(&options.server, "server", defaultServerURL, "FluxCore server base URL")
 	rootCmd.PersistentFlags().StringVar(&options.token, "token", "", "FluxCore API token")
+
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+
+	rootCmd.AddCommand(newInitCommand(options))
+	rootCmd.AddCommand(newLinkCommand(options))
+	rootCmd.AddCommand(newStatusCommand())
 
 	rootCmd.SetHelpCommand(&cobra.Command{
 		Use:    "help",
