@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jaxson/FluxCore/server/model"
@@ -230,7 +231,7 @@ func optionalString(ctx *gin.Context, value string, field string, maxLength int)
 }
 
 func validateStringLength(ctx *gin.Context, value string, field string, maxLength int) (string, bool) {
-	if len(value) > maxLength {
+	if utf8.RuneCountInString(value) > maxLength {
 		writeAPIError(ctx, http.StatusBadRequest, "invalid_request", fmt.Sprintf("%s must be at most %d characters", field, maxLength))
 		return "", false
 	}

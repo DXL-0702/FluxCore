@@ -200,6 +200,24 @@ func TestCreateProjectRejectsInvalidPayload(t *testing.T) {
 	}
 }
 
+func TestCreateProjectCountsUTF8Characters(t *testing.T) {
+	router, _ := newTestRouter(t)
+
+	validName := strings.Repeat("项", 120)
+	recorder := performJSONRequest(router, http.MethodPost, "/api/projects", testAuthorizationHeader(), map[string]string{
+		"name": validName,
+	})
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status code = %d, want %d, body = %s", recorder.Code, http.StatusCreated, recorder.Body.String())
+	}
+
+	invalidName := strings.Repeat("项", 121)
+	recorder = performJSONRequest(router, http.MethodPost, "/api/projects", testAuthorizationHeader(), map[string]string{
+		"name": invalidName,
+	})
+	assertAPIError(t, recorder, http.StatusBadRequest, "invalid_request")
+}
+
 func TestCreateProjectRejectsDuplicateName(t *testing.T) {
 	router, _ := newTestRouter(t)
 	createProject(t, router, "FluxCore")
