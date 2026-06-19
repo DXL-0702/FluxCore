@@ -81,10 +81,13 @@ func (inspector Inspector) Inspect(ctx context.Context) (Repository, error) {
 func (inspector Inspector) RepositoryRoot(ctx context.Context) (string, error) {
 	root, err := inspector.run(ctx, inspector.workingDir, "rev-parse", "--show-toplevel")
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return "", err
+		}
 		if errors.Is(err, exec.ErrNotFound) {
 			return "", fmt.Errorf("%w: %w", ErrGitNotFound, err)
 		}
-		return "", ErrNotRepository
+		return "", fmt.Errorf("%w: %w", ErrNotRepository, err)
 	}
 
 	root = strings.TrimSpace(root)
@@ -165,7 +168,10 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 func (inspector Inspector) remoteURLForName(ctx context.Context, root string, name string) (string, error) {
 	remoteURL, err := inspector.run(ctx, root, "config", "--get", "remote."+name+".url")
 	if err != nil {
-		return "", ErrRemoteMissing
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return "", err
+		}
+		return "", fmt.Errorf("%w: %w", ErrRemoteMissing, err)
 	}
 
 	remoteURL = strings.TrimSpace(remoteURL)
@@ -178,7 +184,10 @@ func (inspector Inspector) remoteURLForName(ctx context.Context, root string, na
 func (inspector Inspector) remoteNames(ctx context.Context, root string) ([]string, error) {
 	rawRemotes, err := inspector.run(ctx, root, "remote")
 	if err != nil {
-		return nil, ErrRemoteMissing
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%w: %w", ErrRemoteMissing, err)
 	}
 
 	names := make([]string, 0)

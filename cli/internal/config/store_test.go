@@ -54,12 +54,12 @@ func TestStoreInitCreatesConfigAndGitignore(t *testing.T) {
 		t.Fatalf(".gitignore = %q", string(gitignore))
 	}
 
-	matches, err := filepath.Glob(filepath.Join(root, DirectoryName, "."+FileName+".*.tmp"))
+	entries, err := os.ReadDir(filepath.Join(root, DirectoryName))
 	if err != nil {
-		t.Fatalf("glob temporary config files: %v", err)
+		t.Fatalf("read config directory: %v", err)
 	}
-	if len(matches) != 0 {
-		t.Fatalf("temporary config files left behind: %v", matches)
+	if len(entries) != 1 || entries[0].Name() != FileName {
+		t.Fatalf("unexpected files in config directory: %v", entries)
 	}
 }
 

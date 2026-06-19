@@ -60,13 +60,17 @@ func TestInspectorInspect(t *testing.T) {
 }
 
 func TestRepositoryRootMapsGitFailureToNotRepository(t *testing.T) {
+	underlying := errors.New("not a git repository")
 	runner := func(ctx context.Context, dir string, args ...string) (string, error) {
-		return "", errors.New("not a git repository")
+		return "", underlying
 	}
 
 	_, err := NewInspectorWithRunner("/tmp", runner).RepositoryRoot(context.Background())
 	if !errors.Is(err, ErrNotRepository) {
 		t.Fatalf("RepositoryRoot() error = %v, want %v", err, ErrNotRepository)
+	}
+	if !errors.Is(err, underlying) {
+		t.Fatalf("RepositoryRoot() error = %v, want underlying error", err)
 	}
 }
 
@@ -81,6 +85,24 @@ func TestRepositoryRootReportsMissingGitExecutable(t *testing.T) {
 	}
 	if errors.Is(err, ErrNotRepository) {
 		t.Fatalf("RepositoryRoot() error = %v, should not be %v", err, ErrNotRepository)
+	}
+}
+
+func TestRepositoryRootPreservesContextErrors(t *testing.T) {
+	for _, expectedErr := range []error{context.Canceled, context.DeadlineExceeded} {
+		t.Run(expectedErr.Error(), func(t *testing.T) {
+			runner := func(ctx context.Context, dir string, args ...string) (string, error) {
+				return "", expectedErr
+			}
+
+			_, err := NewInspectorWithRunner("/tmp", runner).RepositoryRoot(context.Background())
+			if !errors.Is(err, expectedErr) {
+				t.Fatalf("RepositoryRoot() error = %v, want %v", err, expectedErr)
+			}
+			if errors.Is(err, ErrNotRepository) {
+				t.Fatalf("RepositoryRoot() error = %v, should not be %v", err, ErrNotRepository)
+			}
+		})
 	}
 }
 
@@ -119,13 +141,35 @@ func TestRemoteURLFallsBackToFirstConfiguredRemote(t *testing.T) {
 }
 
 func TestRemoteURLRequiresConfiguredRemote(t *testing.T) {
+	underlying := errors.New("missing remote")
 	runner := func(ctx context.Context, dir string, args ...string) (string, error) {
-		return "", errors.New("missing remote")
+		return "", underlying
 	}
 
 	_, err := NewInspectorWithRunner("/repo", runner).RemoteURL(context.Background(), "/repo")
 	if !errors.Is(err, ErrRemoteMissing) {
 		t.Fatalf("RemoteURL() error = %v, want %v", err, ErrRemoteMissing)
+	}
+	if !errors.Is(err, underlying) {
+		t.Fatalf("RemoteURL() error = %v, want underlying error", err)
+	}
+}
+
+func TestRemoteURLPreservesContextErrors(t *testing.T) {
+	for _, expectedErr := range []error{context.Canceled, context.DeadlineExceeded} {
+		t.Run(expectedErr.Error(), func(t *testing.T) {
+			runner := func(ctx context.Context, dir string, args ...string) (string, error) {
+				return "", expectedErr
+			}
+
+			_, err := NewInspectorWithRunner("/repo", runner).RemoteURL(context.Background(), "/repo")
+			if !errors.Is(err, expectedErr) {
+				t.Fatalf("RemoteURL() error = %v, want %v", err, expectedErr)
+			}
+			if errors.Is(err, ErrRemoteMissing) {
+				t.Fatalf("RemoteURL() error = %v, should not be %v", err, ErrRemoteMissing)
+			}
+		})
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/google/renameio/v2"
 )
 
 const (
@@ -175,34 +177,8 @@ func hasGitignoreEntry(data []byte, entry string) bool {
 }
 
 func writeFileAtomic(path string, data []byte, mode os.FileMode) error {
-	dir := filepath.Dir(path)
-	tmpFile, err := os.CreateTemp(dir, "."+filepath.Base(path)+".*.tmp")
-	if err != nil {
-		return fmt.Errorf("create temporary config file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-	removeTmp := true
-	defer func() {
-		if removeTmp {
-			_ = os.Remove(tmpPath)
-		}
-	}()
-
-	if err := tmpFile.Chmod(mode); err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("secure temporary config file permissions: %w", err)
-	}
-	if _, err := tmpFile.Write(data); err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("write temporary config file: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("close temporary config file: %w", err)
-	}
-
-	if err := os.Rename(tmpPath, path); err != nil {
+	if err := renameio.WriteFile(path, data, mode); err != nil {
 		return fmt.Errorf("save fluxcore config: %w", err)
 	}
-	removeTmp = false
 	return nil
 }
