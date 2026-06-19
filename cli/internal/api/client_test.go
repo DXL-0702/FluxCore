@@ -12,24 +12,36 @@ import (
 func TestCreateProjectSendsAuthenticatedJSONRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodPost {
-			t.Fatalf("method = %s", request.Method)
+			t.Errorf("method = %s", request.Method)
+			http.Error(writer, "unexpected method", http.StatusMethodNotAllowed)
+			return
 		}
 		if request.URL.Path != "/api/projects" {
-			t.Fatalf("path = %s", request.URL.Path)
+			t.Errorf("path = %s", request.URL.Path)
+			http.NotFound(writer, request)
+			return
 		}
 		if got := request.Header.Get("Authorization"); got != "Bearer secret-token" {
-			t.Fatalf("Authorization = %q", got)
+			t.Errorf("Authorization = %q", got)
+			http.Error(writer, "unexpected authorization header", http.StatusUnauthorized)
+			return
 		}
 		if got := request.Header.Get("Content-Type"); got != "application/json" {
-			t.Fatalf("Content-Type = %q", got)
+			t.Errorf("Content-Type = %q", got)
+			http.Error(writer, "unexpected content type", http.StatusUnsupportedMediaType)
+			return
 		}
 
 		var body map[string]string
 		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
-			t.Fatalf("decode request body: %v", err)
+			t.Errorf("decode request body: %v", err)
+			http.Error(writer, "invalid request body", http.StatusBadRequest)
+			return
 		}
 		if body["name"] != "FluxCore" {
-			t.Fatalf("name = %q", body["name"])
+			t.Errorf("name = %q", body["name"])
+			http.Error(writer, "unexpected project name", http.StatusBadRequest)
+			return
 		}
 
 		writer.Header().Set("Content-Type", "application/json")
@@ -65,7 +77,9 @@ func TestCreateOrGetProjectUsesListOnConflict(t *testing.T) {
 		case request.Method == http.MethodGet && request.URL.Path == "/api/projects":
 			_, _ = writer.Write([]byte(`{"projects":[{"id":9,"name":"FluxCore","status":"active"}]}`))
 		default:
-			t.Fatalf("unexpected request %s %s", request.Method, request.URL.Path)
+			t.Errorf("unexpected request %s %s", request.Method, request.URL.Path)
+			http.NotFound(writer, request)
+			return
 		}
 	}))
 	defer server.Close()
@@ -98,7 +112,9 @@ func TestCreateOrGetRepositoryReusesSameRemoteURL(t *testing.T) {
 		case request.Method == http.MethodGet && request.URL.Path == "/api/projects/9/repositories":
 			_, _ = writer.Write([]byte(`{"repositories":[{"id":11,"project_id":9,"name":"FluxCore","local_path":"/old/repo","remote_url":"git@example.com:repo.git","default_branch":"main"}]}`))
 		default:
-			t.Fatalf("unexpected request %s %s", request.Method, request.URL.Path)
+			t.Errorf("unexpected request %s %s", request.Method, request.URL.Path)
+			http.NotFound(writer, request)
+			return
 		}
 	}))
 	defer server.Close()
@@ -133,7 +149,9 @@ func TestCreateOrGetRepositoryDoesNotReuseDifferentRemoteURL(t *testing.T) {
 		case request.Method == http.MethodGet && request.URL.Path == "/api/projects/9/repositories":
 			_, _ = writer.Write([]byte(`{"repositories":[{"id":11,"project_id":9,"name":"FluxCore","local_path":"/repo","remote_url":"git@example.com:other.git","default_branch":"main"}]}`))
 		default:
-			t.Fatalf("unexpected request %s %s", request.Method, request.URL.Path)
+			t.Errorf("unexpected request %s %s", request.Method, request.URL.Path)
+			http.NotFound(writer, request)
+			return
 		}
 	}))
 	defer server.Close()

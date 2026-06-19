@@ -64,7 +64,7 @@ func (store Store) Init(options InitOptions) (Config, error) {
 		if options.UpdateServer || strings.TrimSpace(existing.ServerURL) == "" {
 			existing.ServerURL = options.ServerURL
 		}
-		if options.UpdateToken {
+		if options.UpdateToken || (strings.TrimSpace(existing.Token) == "" && strings.TrimSpace(options.Token) != "") {
 			existing.Token = options.Token
 		}
 		existing.UpdatedAt = now

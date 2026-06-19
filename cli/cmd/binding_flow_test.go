@@ -18,8 +18,9 @@ func TestInitLinkStatusFlow(t *testing.T) {
 	repositoryRoot := newTestGitRepository(t)
 	server := newBindingTestServer(t, repositoryRoot)
 	defer server.Close()
+	t.Setenv(envAPIToken, "secret-token")
 
-	output, err := executeForTestInDir(repositoryRoot, "init", "--server", server.URL, "--token", "secret-token")
+	output, err := executeForTestInDir(repositoryRoot, "init", "--server", server.URL)
 	if err != nil {
 		t.Fatalf("init error = %v\noutput:\n%s", err, output)
 	}
@@ -166,7 +167,9 @@ func newBindingTestServer(t *testing.T, repositoryRoot string) *httptest.Server 
 
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if got := request.Header.Get("Authorization"); got != "Bearer secret-token" {
-			t.Fatalf("Authorization = %q", got)
+			t.Errorf("Authorization = %q", got)
+			http.Error(writer, "unexpected authorization header", http.StatusUnauthorized)
+			return
 		}
 		writer.Header().Set("Content-Type", "application/json")
 
@@ -174,26 +177,38 @@ func newBindingTestServer(t *testing.T, repositoryRoot string) *httptest.Server 
 		case request.Method == http.MethodPost && request.URL.Path == "/api/projects":
 			var body map[string]string
 			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
-				t.Fatalf("decode project request: %v", err)
+				t.Errorf("decode project request: %v", err)
+				http.Error(writer, "invalid project request", http.StatusBadRequest)
+				return
 			}
 			if body["name"] != "FluxCore" {
-				t.Fatalf("project name = %q", body["name"])
+				t.Errorf("project name = %q", body["name"])
+				http.Error(writer, "unexpected project name", http.StatusBadRequest)
+				return
 			}
 			writer.WriteHeader(http.StatusCreated)
 			_, _ = writer.Write([]byte(`{"project":{"id":7,"name":"FluxCore","status":"active"}}`))
 		case request.Method == http.MethodPost && request.URL.Path == "/api/projects/7/repositories":
 			var body map[string]string
 			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
-				t.Fatalf("decode repository request: %v", err)
+				t.Errorf("decode repository request: %v", err)
+				http.Error(writer, "invalid repository request", http.StatusBadRequest)
+				return
 			}
 			if body["name"] != filepath.Base(repositoryRoot) {
-				t.Fatalf("repository name = %q", body["name"])
+				t.Errorf("repository name = %q", body["name"])
+				http.Error(writer, "unexpected repository name", http.StatusBadRequest)
+				return
 			}
 			if body["local_path"] != repositoryRoot {
-				t.Fatalf("local_path = %q, want %q", body["local_path"], repositoryRoot)
+				t.Errorf("local_path = %q, want %q", body["local_path"], repositoryRoot)
+				http.Error(writer, "unexpected local path", http.StatusBadRequest)
+				return
 			}
 			if body["remote_url"] != "git@example.com:DXL-0702/FluxCore.git" {
-				t.Fatalf("remote_url = %q", body["remote_url"])
+				t.Errorf("remote_url = %q", body["remote_url"])
+				http.Error(writer, "unexpected remote url", http.StatusBadRequest)
+				return
 			}
 			writer.WriteHeader(http.StatusCreated)
 			response := map[string]interface{}{
@@ -207,10 +222,13 @@ func newBindingTestServer(t *testing.T, repositoryRoot string) *httptest.Server 
 				},
 			}
 			if err := json.NewEncoder(writer).Encode(response); err != nil {
-				t.Fatalf("encode repository response: %v", err)
+				t.Errorf("encode repository response: %v", err)
+				return
 			}
 		default:
-			t.Fatalf("unexpected request %s %s", request.Method, request.URL.Path)
+			t.Errorf("unexpected request %s %s", request.Method, request.URL.Path)
+			http.NotFound(writer, request)
+			return
 		}
 	}))
 }

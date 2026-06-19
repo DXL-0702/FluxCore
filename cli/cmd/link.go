@@ -115,5 +115,7 @@ func runLink(cmd *cobra.Command, rootOptions *rootOptions, options *linkOptions)
 }
 
 func flagChanged(cmd *cobra.Command, name string) bool {
-	return cmd.Flags().Changed(name)
+	return cmd.Flags().Changed(name) ||
+		cmd.InheritedFlags().Changed(name) ||
+		cmd.PersistentFlags().Changed(name)
 }

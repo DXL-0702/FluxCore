@@ -3,11 +3,16 @@ package cmd
 import (
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-const defaultServerURL = "http://127.0.0.1:8080"
+const (
+	defaultServerURL = "http://127.0.0.1:8080"
+	envServerURL     = "FLUXCORE_SERVER"
+	envAPIToken      = "FLUXCORE_TOKEN"
+)
 
 type rootOptions struct {
 	server     string
@@ -20,15 +25,14 @@ func Execute() error {
 }
 
 func newRootCommand() *cobra.Command {
-	return newRootCommandWithOptions(&rootOptions{
-		workingDir: os.Getwd,
-	})
+	return newRootCommandWithOptions(&rootOptions{})
 }
 
 func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
-	if options.workingDir == nil {
-		options.workingDir = os.Getwd
+	if options == nil {
+		options = &rootOptions{}
 	}
+	applyRootStaticDefaults(options)
 
 	rootCmd := &cobra.Command{
 		Use:           "fluxcore",
@@ -39,10 +43,13 @@ func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			applyRootRuntimeDefaults(cmd, options)
+		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&options.server, "server", defaultServerURL, "FluxCore server base URL")
-	rootCmd.PersistentFlags().StringVar(&options.token, "token", "", "FluxCore API token")
+	rootCmd.PersistentFlags().StringVar(&options.server, "server", options.server, "FluxCore server base URL (env "+envServerURL+")")
+	rootCmd.PersistentFlags().Var(&secretFlagValue{target: &options.token}, "token", "FluxCore API token (env "+envAPIToken+")")
 
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
@@ -56,6 +63,51 @@ func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
 	})
 
 	return rootCmd
+}
+
+func applyRootStaticDefaults(options *rootOptions) {
+	if options.workingDir == nil {
+		options.workingDir = os.Getwd
+	}
+	if strings.TrimSpace(options.server) == "" {
+		options.server = envOrDefault(envServerURL, defaultServerURL)
+	}
+}
+
+func applyRootRuntimeDefaults(cmd *cobra.Command, options *rootOptions) {
+	if strings.TrimSpace(options.server) == "" {
+		options.server = envOrDefault(envServerURL, defaultServerURL)
+	}
+	if !flagChanged(cmd, "token") && strings.TrimSpace(options.token) == "" {
+		options.token = strings.TrimSpace(os.Getenv(envAPIToken))
+	}
+}
+
+func envOrDefault(name string, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+type secretFlagValue struct {
+	target *string
+}
+
+func (value *secretFlagValue) Set(input string) error {
+	if value.target != nil {
+		*value.target = input
+	}
+	return nil
+}
+
+func (value *secretFlagValue) String() string {
+	return ""
+}
+
+func (value *secretFlagValue) Type() string {
+	return "string"
 }
 
 func executeForTest(args ...string) (string, error) {

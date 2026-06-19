@@ -151,6 +151,62 @@ func TestStoreInitAllowsExplicitOverrides(t *testing.T) {
 	}
 }
 
+func TestStoreInitFillsMissingTokenWithoutExplicitOverride(t *testing.T) {
+	root := t.TempDir()
+	store := NewStoreWithClock(root, func() time.Time {
+		return time.Date(2026, 6, 19, 10, 0, 0, 0, time.UTC)
+	})
+
+	if _, err := store.Init(InitOptions{
+		ServerURL:    "http://127.0.0.1:8080",
+		Token:        "",
+		UpdateServer: true,
+		UpdateToken:  true,
+	}); err != nil {
+		t.Fatalf("first Init() error = %v", err)
+	}
+
+	cfg, err := store.Init(InitOptions{
+		ServerURL: "http://127.0.0.1:8080",
+		Token:     "env-token",
+	})
+	if err != nil {
+		t.Fatalf("second Init() error = %v", err)
+	}
+
+	if cfg.Token != "env-token" {
+		t.Fatalf("Token = %q, want %q", cfg.Token, "env-token")
+	}
+}
+
+func TestStoreInitDoesNotReplaceExistingTokenWithoutExplicitOverride(t *testing.T) {
+	root := t.TempDir()
+	store := NewStoreWithClock(root, func() time.Time {
+		return time.Date(2026, 6, 19, 10, 0, 0, 0, time.UTC)
+	})
+
+	if _, err := store.Init(InitOptions{
+		ServerURL:    "http://127.0.0.1:8080",
+		Token:        "existing-token",
+		UpdateServer: true,
+		UpdateToken:  true,
+	}); err != nil {
+		t.Fatalf("first Init() error = %v", err)
+	}
+
+	cfg, err := store.Init(InitOptions{
+		ServerURL: "http://127.0.0.1:8080",
+		Token:     "env-token",
+	})
+	if err != nil {
+		t.Fatalf("second Init() error = %v", err)
+	}
+
+	if cfg.Token != "existing-token" {
+		t.Fatalf("Token = %q, want %q", cfg.Token, "existing-token")
+	}
+}
+
 func TestStoreLoadMissingConfig(t *testing.T) {
 	_, err := NewStore(t.TempDir()).Load()
 	if err != ErrConfigNotFound {

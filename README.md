@@ -154,7 +154,8 @@ go install .
 
 # Initialize FluxCore in any project
 cd /path/to/your/project
-fluxcore init --server http://127.0.0.1:8080 --token local-dev-token
+export FLUXCORE_TOKEN=local-dev-token
+fluxcore init --server http://127.0.0.1:8080
 fluxcore link --project "my-project"
 fluxcore status
 ```

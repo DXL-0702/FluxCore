@@ -267,6 +267,7 @@ func writeServiceError(ctx *gin.Context, err error) {
 	case errors.Is(err, service.ErrRepositoryConflict):
 		writeAPIError(ctx, http.StatusConflict, "conflict", "repository conflicts with an existing repository")
 	default:
+		_ = ctx.Error(err)
 		writeAPIError(ctx, http.StatusInternalServerError, "internal_error", "internal server error")
 	}
 }
