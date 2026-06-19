@@ -42,9 +42,6 @@ func bearerTokenFromHeader(header string) (string, bool) {
 	if !strings.EqualFold(parts[0], bearerAuthScheme) {
 		return "", false
 	}
-	if parts[1] == "" {
-		return "", false
-	}
 
 	return parts[1], true
 }
