@@ -144,10 +144,13 @@ func decodeJSONBody(ctx *gin.Context, destination interface{}) bool {
 func writeJSONDecodeError(ctx *gin.Context, err error) {
 	var syntaxError *json.SyntaxError
 	var unmarshalTypeError *json.UnmarshalTypeError
+	var maxBytesError *http.MaxBytesError
 
 	switch {
 	case errors.Is(err, io.EOF):
 		writeAPIError(ctx, http.StatusBadRequest, "invalid_json", "request body is required")
+	case errors.As(err, &maxBytesError):
+		writeAPIError(ctx, http.StatusRequestEntityTooLarge, "request_too_large", "request body exceeds the maximum allowed size")
 	case errors.As(err, &syntaxError):
 		writeAPIError(ctx, http.StatusBadRequest, "invalid_json", "request body contains malformed JSON")
 	case errors.As(err, &unmarshalTypeError):

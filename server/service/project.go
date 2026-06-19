@@ -42,9 +42,6 @@ func (svc *ProjectService) CreateProject(input CreateProjectInput) (model.Projec
 	if err := svc.ensureConnection(); err != nil {
 		return model.Project{}, err
 	}
-	if err := svc.ensureProjectNameAvailable(input.Name); err != nil {
-		return model.Project{}, err
-	}
 
 	project := model.Project{
 		Name:        input.Name,
@@ -83,15 +80,6 @@ func (svc *ProjectService) CreateRepository(projectID uint, input CreateReposito
 		return model.Repository{}, err
 	}
 	if err := svc.ensureProjectExists(projectID); err != nil {
-		return model.Repository{}, err
-	}
-	if err := svc.ensureRepositoryNameAvailable(projectID, input.Name); err != nil {
-		return model.Repository{}, err
-	}
-	if err := svc.ensureRepositoryRemoteAvailable(projectID, input.RemoteURL); err != nil {
-		return model.Repository{}, err
-	}
-	if err := svc.ensureRepositoryLocalPathAvailable(input.LocalPath); err != nil {
 		return model.Repository{}, err
 	}
 
@@ -146,17 +134,6 @@ func (svc *ProjectService) ensureProjectExists(projectID uint) error {
 	}
 	if count == 0 {
 		return ErrProjectNotFound
-	}
-	return nil
-}
-
-func (svc *ProjectService) ensureProjectNameAvailable(name string) error {
-	var count int64
-	if err := svc.conn.Model(&model.Project{}).Where("name = ?", name).Count(&count).Error; err != nil {
-		return fmt.Errorf("check project name: %w", err)
-	}
-	if count > 0 {
-		return ErrProjectNameExists
 	}
 	return nil
 }

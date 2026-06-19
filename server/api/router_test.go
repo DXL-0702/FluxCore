@@ -200,6 +200,15 @@ func TestCreateProjectRejectsInvalidPayload(t *testing.T) {
 	}
 }
 
+func TestCreateProjectRejectsOversizedRequestBody(t *testing.T) {
+	router, _ := newTestRouter(t)
+
+	body := fmt.Sprintf(`{"name":%q}`, strings.Repeat("x", maxJSONBodyBytes))
+	recorder := performRawRequest(router, http.MethodPost, "/api/projects", testAuthorizationHeader(), body)
+
+	assertAPIError(t, recorder, http.StatusRequestEntityTooLarge, "request_too_large")
+}
+
 func TestCreateProjectCountsUTF8Characters(t *testing.T) {
 	router, _ := newTestRouter(t)
 
