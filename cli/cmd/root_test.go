@@ -33,3 +33,27 @@ func TestRootCommandRunsHelpByDefault(t *testing.T) {
 		t.Fatalf("output does not contain usage\noutput:\n%s", output)
 	}
 }
+
+func TestRootFlagsPopulateOptions(t *testing.T) {
+	options := &rootOptions{}
+	command := newRootCommandWithOptions(options)
+	output := newTestOutput()
+	command.SetOut(output)
+	command.SetErr(output)
+	command.SetArgs([]string{
+		"--server", "http://127.0.0.1:9090",
+		"--token", "test-token",
+		"--help",
+	})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	if options.server != "http://127.0.0.1:9090" {
+		t.Fatalf("server = %q, want %q", options.server, "http://127.0.0.1:9090")
+	}
+	if options.token != "test-token" {
+		t.Fatalf("token = %q, want %q", options.token, "test-token")
+	}
+}

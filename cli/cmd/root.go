@@ -18,8 +18,10 @@ func Execute() error {
 }
 
 func newRootCommand() *cobra.Command {
-	options := rootOptions{}
+	return newRootCommandWithOptions(&rootOptions{})
+}
 
+func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "fluxcore",
 		Short: "FluxCore local development context CLI",
