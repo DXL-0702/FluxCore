@@ -102,12 +102,12 @@ func NewClientWithHTTPClient(baseURL string, token string, httpClient *http.Clie
 }
 
 func (client *Client) CreateOrGetProject(ctx context.Context, input CreateProjectInput) (Project, error) {
-	project, err := client.CreateProject(ctx, input)
-	if err == nil {
+	project, createErr := client.CreateProject(ctx, input)
+	if createErr == nil {
 		return project, nil
 	}
-	if !errors.Is(err, ErrConflict) {
-		return Project{}, err
+	if !errors.Is(createErr, ErrConflict) {
+		return Project{}, createErr
 	}
 
 	projects, err := client.ListProjects(ctx)
@@ -119,7 +119,7 @@ func (client *Client) CreateOrGetProject(ctx context.Context, input CreateProjec
 			return item, nil
 		}
 	}
-	return Project{}, fmt.Errorf("project %q already exists but could not be found", input.Name)
+	return Project{}, createErr
 }
 
 func (client *Client) CreateProject(ctx context.Context, input CreateProjectInput) (Project, error) {
@@ -143,12 +143,12 @@ func (client *Client) ListProjects(ctx context.Context) ([]Project, error) {
 }
 
 func (client *Client) CreateOrGetRepository(ctx context.Context, projectID uint, input CreateRepositoryInput) (Repository, error) {
-	repository, err := client.CreateRepository(ctx, projectID, input)
-	if err == nil {
+	repository, createErr := client.CreateRepository(ctx, projectID, input)
+	if createErr == nil {
 		return repository, nil
 	}
-	if !errors.Is(err, ErrConflict) {
-		return Repository{}, err
+	if !errors.Is(createErr, ErrConflict) {
+		return Repository{}, createErr
 	}
 
 	repositories, err := client.ListRepositories(ctx, projectID)
@@ -160,7 +160,7 @@ func (client *Client) CreateOrGetRepository(ctx context.Context, projectID uint,
 			return item, nil
 		}
 	}
-	return Repository{}, fmt.Errorf("repository %q already exists but could not be found", input.Name)
+	return Repository{}, createErr
 }
 
 func (client *Client) CreateRepository(ctx context.Context, projectID uint, input CreateRepositoryInput) (Repository, error) {

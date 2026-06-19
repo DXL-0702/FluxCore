@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -101,6 +102,44 @@ func TestCreateOrGetProjectUsesListOnConflict(t *testing.T) {
 	}
 }
 
+func TestCreateOrGetProjectReturnsCreateConflictWhenListMisses(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+
+		switch {
+		case request.Method == http.MethodPost && request.URL.Path == "/api/projects":
+			writer.WriteHeader(http.StatusConflict)
+			_, _ = writer.Write([]byte(`{"error":{"code":"conflict","message":"project name already exists"}}`))
+		case request.Method == http.MethodGet && request.URL.Path == "/api/projects":
+			_, _ = writer.Write([]byte(`{"projects":[]}`))
+		default:
+			t.Errorf("unexpected request %s %s", request.Method, request.URL.Path)
+			http.NotFound(writer, request)
+			return
+		}
+	}))
+	defer server.Close()
+
+	client, err := NewClient(server.URL, "secret-token")
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	_, err = client.CreateOrGetProject(context.Background(), CreateProjectInput{Name: "FluxCore"})
+	if err == nil {
+		t.Fatal("CreateOrGetProject() error = nil, want error")
+	}
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("CreateOrGetProject() error = %v, want ErrConflict", err)
+	}
+	if !strings.Contains(err.Error(), "project name already exists") {
+		t.Fatalf("error = %q, want original conflict message", err.Error())
+	}
+	if strings.Contains(err.Error(), "could not be found") {
+		t.Fatalf("error = %q, want original conflict error", err.Error())
+	}
+}
+
 func TestCreateOrGetRepositoryReusesSameRemoteURL(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
@@ -145,7 +184,7 @@ func TestCreateOrGetRepositoryDoesNotReuseDifferentRemoteURL(t *testing.T) {
 		switch {
 		case request.Method == http.MethodPost && request.URL.Path == "/api/projects/9/repositories":
 			writer.WriteHeader(http.StatusConflict)
-			_, _ = writer.Write([]byte(`{"error":{"code":"conflict","message":"repository conflicts"}}`))
+			_, _ = writer.Write([]byte(`{"error":{"code":"conflict","message":"repository local_path already exists"}}`))
 		case request.Method == http.MethodGet && request.URL.Path == "/api/projects/9/repositories":
 			_, _ = writer.Write([]byte(`{"repositories":[{"id":11,"project_id":9,"name":"FluxCore","local_path":"/repo","remote_url":"git@example.com:other.git","default_branch":"main"}]}`))
 		default:
@@ -169,6 +208,15 @@ func TestCreateOrGetRepositoryDoesNotReuseDifferentRemoteURL(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("CreateOrGetRepository() error = nil, want error")
+	}
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("CreateOrGetRepository() error = %v, want ErrConflict", err)
+	}
+	if !strings.Contains(err.Error(), "repository local_path already exists") {
+		t.Fatalf("error = %q, want original conflict message", err.Error())
+	}
+	if strings.Contains(err.Error(), "could not be found") {
+		t.Fatalf("error = %q, want original conflict error", err.Error())
 	}
 }
 
