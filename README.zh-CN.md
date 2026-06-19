@@ -141,8 +141,7 @@ cd FluxCore
 
 # 启动后端
 cd server
-cp .env.example .env
-go run main.go
+API_TOKEN=local-dev-token go run .
 
 # 启动前端（新终端窗口）
 cd web
@@ -154,8 +153,10 @@ go install .
 
 # 在任意项目中初始化 FluxCore
 cd /path/to/your/project
-fluxcore init
+export FLUXCORE_TOKEN=local-dev-token
+fluxcore init --server http://127.0.0.1:8080
 fluxcore link --project "my-project"
+fluxcore status
 ```
 
 ## 参与贡献

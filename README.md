@@ -142,8 +142,7 @@ cd FluxCore
 
 # Start the backend
 cd server
-cp .env.example .env
-go run main.go
+API_TOKEN=local-dev-token go run .
 
 # Start the frontend (in a new terminal)
 cd web
@@ -155,8 +154,10 @@ go install .
 
 # Initialize FluxCore in any project
 cd /path/to/your/project
-fluxcore init
+export FLUXCORE_TOKEN=local-dev-token
+fluxcore init --server http://127.0.0.1:8080
 fluxcore link --project "my-project"
+fluxcore status
 ```
 
 ## Contributing

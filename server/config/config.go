@@ -83,7 +83,10 @@ func LoadFromLookup(lookup LookupEnv) (Config, error) {
 		return Config{}, fmt.Errorf("DB_TYPE must be one of sqlite or postgres, got %q", dbType)
 	}
 
-	apiToken, _ := optionalEnv(lookup, "API_TOKEN")
+	apiToken, err := requiredEnv(lookup, "API_TOKEN")
+	if err != nil {
+		return Config{}, err
+	}
 
 	return Config{
 		Server: ServerConfig{
@@ -136,18 +139,4 @@ func requiredEnv(lookup LookupEnv, key string) (string, error) {
 	}
 
 	return value, nil
-}
-
-func optionalEnv(lookup LookupEnv, key string) (string, bool) {
-	value, ok := lookup(key)
-	if !ok {
-		return "", false
-	}
-
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "", false
-	}
-
-	return value, true
 }

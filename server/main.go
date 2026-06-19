@@ -26,7 +26,6 @@ func run() error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	router := api.NewRouter(cfg)
 	addr := cfg.Server.Address
 	conn, err := db.Open(cfg.Database)
 	if err != nil {
@@ -46,6 +45,8 @@ func run() error {
 	if err := service.Migrate(conn); err != nil {
 		return fmt.Errorf("migrate database: %w", err)
 	}
+
+	router := api.NewRouter(cfg, conn)
 
 	log.Printf("starting FluxCore server on %s", addr)
 	if err := router.Run(addr); err != nil {
