@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -9,8 +10,9 @@ import (
 const defaultServerURL = "http://127.0.0.1:8080"
 
 type rootOptions struct {
-	server string
-	token  string
+	server     string
+	token      string
+	workingDir func() (string, error)
 }
 
 func Execute() error {
@@ -18,14 +20,22 @@ func Execute() error {
 }
 
 func newRootCommand() *cobra.Command {
-	return newRootCommandWithOptions(&rootOptions{})
+	return newRootCommandWithOptions(&rootOptions{
+		workingDir: os.Getwd,
+	})
 }
 
 func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
+	if options.workingDir == nil {
+		options.workingDir = os.Getwd
+	}
+
 	rootCmd := &cobra.Command{
-		Use:   "fluxcore",
-		Short: "FluxCore local development context CLI",
-		Long:  "FluxCore connects local Git repositories to the FluxCore backend.",
+		Use:           "fluxcore",
+		Short:         "FluxCore local development context CLI",
+		Long:          "FluxCore connects local Git repositories to the FluxCore backend.",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -33,6 +43,12 @@ func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
 
 	rootCmd.PersistentFlags().StringVar(&options.server, "server", defaultServerURL, "FluxCore server base URL")
 	rootCmd.PersistentFlags().StringVar(&options.token, "token", "", "FluxCore API token")
+
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+
+	rootCmd.AddCommand(newInitCommand(options))
+	rootCmd.AddCommand(newLinkCommand(options))
+	rootCmd.AddCommand(newStatusCommand(options))
 
 	rootCmd.SetHelpCommand(&cobra.Command{
 		Use:    "help",
@@ -43,7 +59,19 @@ func newRootCommandWithOptions(options *rootOptions) *cobra.Command {
 }
 
 func executeForTest(args ...string) (string, error) {
-	command := newRootCommand()
+	return executeForTestWithOptions(&rootOptions{}, args...)
+}
+
+func executeForTestInDir(workingDir string, args ...string) (string, error) {
+	return executeForTestWithOptions(&rootOptions{
+		workingDir: func() (string, error) {
+			return workingDir, nil
+		},
+	}, args...)
+}
+
+func executeForTestWithOptions(options *rootOptions, args ...string) (string, error) {
+	command := newRootCommandWithOptions(options)
 	output := newTestOutput()
 	command.SetOut(output)
 	command.SetErr(output)
