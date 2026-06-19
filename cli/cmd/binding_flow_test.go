@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -124,6 +125,39 @@ func TestLinkRequiresInitializedConfig(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "run fluxcore init first") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLinkUsesRootTokenWhenConfigTokenIsEmpty(t *testing.T) {
+	repositoryRoot := newTestGitRepository(t)
+	server := newBindingTestServer(t, repositoryRoot)
+	defer server.Close()
+
+	output, err := executeForTestInDir(repositoryRoot, "init", "--server", server.URL)
+	if err != nil {
+		t.Fatalf("init error = %v\noutput:\n%s", err, output)
+	}
+
+	options := &rootOptions{
+		token: "secret-token",
+		workingDir: func() (string, error) {
+			return repositoryRoot, nil
+		},
+	}
+	command := newLinkCommand(options)
+	command.SetContext(context.Background())
+	outputBuffer := newTestOutput()
+	command.SetOut(outputBuffer)
+	command.SetErr(outputBuffer)
+
+	err = runLink(command, options, &linkOptions{project: "FluxCore"})
+	if err != nil {
+		t.Fatalf("link error = %v\noutput:\n%s", err, outputBuffer.String())
+	}
+
+	cfg := readTestConfig(t, repositoryRoot)
+	if cfg.Token != "secret-token" {
+		t.Fatalf("Token = %q, want %q", cfg.Token, "secret-token")
 	}
 }
 

@@ -67,7 +67,7 @@ func runLink(cmd *cobra.Command, rootOptions *rootOptions, options *linkOptions)
 		serverURL = rootOptions.server
 	}
 	token := cfg.Token
-	if flagChanged(cmd, "token") {
+	if flagChanged(cmd, "token") || strings.TrimSpace(token) == "" {
 		token = rootOptions.token
 	}
 

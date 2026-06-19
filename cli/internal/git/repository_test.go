@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"errors"
+	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
@@ -66,6 +67,20 @@ func TestRepositoryRootMapsGitFailureToNotRepository(t *testing.T) {
 	_, err := NewInspectorWithRunner("/tmp", runner).RepositoryRoot(context.Background())
 	if !errors.Is(err, ErrNotRepository) {
 		t.Fatalf("RepositoryRoot() error = %v, want %v", err, ErrNotRepository)
+	}
+}
+
+func TestRepositoryRootReportsMissingGitExecutable(t *testing.T) {
+	runner := func(ctx context.Context, dir string, args ...string) (string, error) {
+		return "", exec.ErrNotFound
+	}
+
+	_, err := NewInspectorWithRunner("/tmp", runner).RepositoryRoot(context.Background())
+	if !errors.Is(err, ErrGitNotFound) {
+		t.Fatalf("RepositoryRoot() error = %v, want %v", err, ErrGitNotFound)
+	}
+	if errors.Is(err, ErrNotRepository) {
+		t.Fatalf("RepositoryRoot() error = %v, should not be %v", err, ErrNotRepository)
 	}
 }
 

@@ -128,13 +128,7 @@ func (store Store) Save(cfg Config) error {
 	}
 	data = append(data, '\n')
 
-	if err := writeFileAtomic(store.configPath(), data, fileMode); err != nil {
-		return err
-	}
-	if err := os.Chmod(store.configPath(), fileMode); err != nil {
-		return fmt.Errorf("secure fluxcore config permissions: %w", err)
-	}
-	return nil
+	return writeFileAtomic(store.configPath(), data, fileMode)
 }
 
 func (store Store) EnsureGitignored() error {

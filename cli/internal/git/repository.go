@@ -13,6 +13,7 @@ import (
 var (
 	ErrNotRepository = errors.New("current directory is not inside a git repository")
 	ErrRemoteMissing = errors.New("git remote origin is not configured")
+	ErrGitNotFound   = errors.New("git executable not found in PATH")
 )
 
 type Repository struct {
@@ -80,6 +81,9 @@ func (inspector Inspector) Inspect(ctx context.Context) (Repository, error) {
 func (inspector Inspector) RepositoryRoot(ctx context.Context) (string, error) {
 	root, err := inspector.run(ctx, inspector.workingDir, "rev-parse", "--show-toplevel")
 	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return "", fmt.Errorf("%w: %w", ErrGitNotFound, err)
+		}
 		return "", ErrNotRepository
 	}
 
