@@ -15,19 +15,18 @@ func requireAPIToken(expectedToken string) gin.HandlerFunc {
 	expectedToken = strings.TrimSpace(expectedToken)
 
 	return func(ctx *gin.Context) {
-		if !isAPIPath(ctx.Request.URL.Path) {
-			ctx.Next()
-			return
-		}
-
-		token, ok := bearerTokenFromHeader(ctx.GetHeader("Authorization"))
-		if !ok || expectedToken == "" || !secureTokenEqual(token, expectedToken) {
+		if !isAuthorized(ctx.GetHeader("Authorization"), expectedToken) {
 			writeUnauthorized(ctx)
 			return
 		}
 
 		ctx.Next()
 	}
+}
+
+func isAuthorized(header string, expectedToken string) bool {
+	token, ok := bearerTokenFromHeader(header)
+	return ok && expectedToken != "" && secureTokenEqual(token, expectedToken)
 }
 
 func isAPIPath(path string) bool {
