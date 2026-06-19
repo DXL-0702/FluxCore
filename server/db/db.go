@@ -26,6 +26,7 @@ func Open(cfg config.DatabaseConfig) (*gorm.DB, error) {
 
 	conn, err := gorm.Open(dialector, &gorm.Config{
 		DisableAutomaticPing: true,
+		TranslateError:       true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open %s database: %w", cfg.Type, err)
